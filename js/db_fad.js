@@ -2,9 +2,44 @@ if(openDatabase){
         db = openDatabase('ftars_jb' , '1.0' , 'FTARS Jervis Bay' , 2 * 1024 * 1024);
 };
 
+var v_getFad_fn = function(e) {
+    e.preventDefault; 
+    $("#divListGp").hide(); 
+    $("#content").show();
+    document.addEventListener("deviceready", function() {document.removeEventListener("backbutton", v_getFad_fn, true);}, false);
+};
+
+var v_addGp_fn = function(e) {
+    e.preventDefault; 
+    $("#content").hide();
+    $("#divAddGp").hide(); 
+    $("#divListGp").show();
+    document.addEventListener("deviceready", function() {document.removeEventListener("backbutton", v_addGp_fn, false);}, false);
+    getFad();
+};
+
+var v_editGp_fn = function(e) {
+    e.preventDefault; 
+    $("#content").hide();
+    $("#divEditGp").hide(); 
+    $("#divListGp").show();
+    document.addEventListener("deviceready", function() {document.removeEventListener("backbutton", v_editGp_fn, false);}, false);
+    getFad();
+};
+
+var v_editGpAttr_fn = function(e) {
+    e.preventDefault; 
+    $("#content").hide();
+    $("#divGpAttr").hide(); 
+    $("#divListGp").show();
+    document.addEventListener("deviceready", function() {document.removeEventListener("backbutton", v_editGpAttr_fn, false);}, false);
+    getFad();
+};
+
 function addGp() {
     $("#divAddGp #frmAddGp #x_fadabbr").val("");
     $("#divAddGp #frmAddGp #x_fadname").val("");
+    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", v_addGp_fn, false);}, false);
 }
 
 function editGp(x_fadcode) {
@@ -19,12 +54,12 @@ function editGp(x_fadcode) {
                      },
                      errorHandler);
     });
+    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", v_editGp_fn, false);}, false);
 }
 
 function editGpAttr(x_fadcode) {
     $("#divListGp").hide();
     $("#divGpAttr").show();
-
 
     // Get the group details
     $("#divGpAttr #tbl_link_attr").empty();
@@ -73,7 +108,7 @@ function editGpAttr(x_fadcode) {
 
 
     });
-    
+    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", v_editGpAttr_fn, false);}, false);
 }
 
 function updGpAttr() {
@@ -145,5 +180,6 @@ function getFad() {
                      }, 
                      errorHandler) ;
     });
+    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", v_getFad_fn, false);}, false);
 }
 

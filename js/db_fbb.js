@@ -2,6 +2,16 @@ if(openDatabase){
         db = openDatabase('ftars_jb' , '1.0' , 'FTARS Jervis Bay' , 2 * 1024 * 1024);
 };
 
+var v_editFbb_fn = function(e) {
+    e.preventDefault; 
+    $("#divSpeciesGp").hide(); 
+    $("#divSetupSpecies").show(); 
+    $("#content").hide(); 
+    $("tbl_species_list").empty();
+    getFab();
+    document.removeEventListener("backbutton", v_editFbb_fn);
+};
+
 function editFbb(x_fabcode) {
     $("#divSetupSpecies").hide();
     $("#divSpeciesGp").show();
@@ -56,6 +66,7 @@ function editFbb(x_fabcode) {
                     },
                     errorHandler);
     });
+    document.addEventListener("backbutton", v_editFbb_fn, false);
 }
 
 function getGpName(x_groupcode) {
@@ -79,22 +90,40 @@ function updSpeGp() {
     var v_specimens = [];
     $(v_specimens).empty();
     $(v_fbc_arr).empty();
+
     db.transaction(function(tx) {
         tx.executeSql('SELECT * FROM faespm WHERE faespecies = ?', [v_fbbspecies],
-                      function(tx, v_results) {
-                        var v_rowcount = v_results.rows.length;
-                        for (v_count = 0; v_count < v_rowcount; v_count++) {
-                            v_specimens.push(v_results.rows.item(v_count).faecode);
-//                            v_specimens[v_count] = v_results.rows.item(v_count).faecode;
-                        }
-                    }, nullData);
+                      load_fae_results, nullData);
     });
-
+    function load_fae_results(tx, v_results) {
+        var v_rowcount = v_results.rows.length;
+        for (v_count = 0; v_count < v_rowcount; v_count++) {
+              v_specimens.push(v_results.rows.item(v_count).faecode);
+        }   
+    }
     // Cache the existing fbc records
-    db.transaction(function(tx_fae) {
+//    db.transaction(function(tx_fae) {
+//        for (var v_count = 0; v_count < v_specimens.length; v_count ++) {
+//                tx_fae.executeSql('SELECT * FROM fbcsfa WHERE fbcspecimencode = ?', [v_specimens[v_count]],
+//                function(tx_fae, v_results2) {
+//                    var v_fbccount = v_results2.rows.length;
+//                    for (v_count3 = 0; v_count3 < v_fbccount; v_count3 ++ ) {
+//                    v_fbc_arr.push(
+//                        [v_results2.rows.item(v_count3).fbcheader,
+//                         v_results2.rows.item(v_count3).fbcspecimencode,
+//                         v_results2.rows.item(v_count3).fbcattrcode,
+//                         v_results2.rows.item(v_count3).fbcattrtitle,
+//                         v_results2.rows.item(v_count3).fbcdispans,
+//                         v_results2.rows.item(v_count3).fbcans]);
+//                    }
+//                }, nullData);
+//        }
+//    });
+    
+    db.transaction(function(tx) {
         for (var v_count = 0; v_count < v_specimens.length; v_count ++) {
-                tx_fae.executeSql('SELECT * FROM fbcsfa WHERE fbcspecimencode = ?', [v_specimens[v_count]],
-                function(tx_fae, v_results2) {
+                tx.executeSql('SELECT * FROM fbcsfa WHERE fbcspecimencode = ?', [v_specimens[v_count]],
+                function(tx, v_results2) {
                     var v_fbccount = v_results2.rows.length;
                     for (v_count3 = 0; v_count3 < v_fbccount; v_count3 ++ ) {
                     v_fbc_arr.push(
@@ -107,9 +136,7 @@ function updSpeGp() {
                     }
                 }, nullData);
         }
-    });
-    
-    db.transaction(function(tx) {
+
        // Remove existing values for this species
        tx.executeSql('DELETE FROM fbbsgl WHERE fbbspecies = ?', [v_fbbspecies], nullData, errorHandler);
        // before inserting new ones.
@@ -122,7 +149,8 @@ function updSpeGp() {
             });
             $(this).children("div .ui-flipswitch-active").each(function() {
                 tx.executeSql('INSERT INTO fbbsgl (fbbspecies, fbbgroupcode) '
-                            + ' VALUES (?, ?)', [v_fbbspecies, v_groupcode], nullData, errorHandler);
+                            + ' VALUES (?, ?)', [v_fbbspecies, v_groupcode], nullData, errorHandler_fbb);
+
                 v_tmpgroup = v_groupcode;
                 var v_fbcheader = '';
 
@@ -138,7 +166,7 @@ function updSpeGp() {
                  * Once finished, check if there is a dispans = 'D'.  If not then add one with the group name
                  * 
                  */
-                tx.executeSql('SELECT fbaattrcode, facname, facabbr '
+                tx.executeSql('SELECT fbaattrcode, facname, facabbr, facfldtype, facvalidcodes '
                             + 'FROM   fbagpa, facatr '
                             + 'WHERE  fbagroupcode = ? '
                             + 'AND    fbaattrcode = faccode '
@@ -147,6 +175,7 @@ function updSpeGp() {
                             + '    FROM   fbcsfa, faespm '
                             + '    WHERE  fbcspecimencode = faecode '
                             + '    AND    fbcdispans = "A"'
+//                            + '    AND    fbcspecies = faespecies'
                             + '    AND    faespecies = ?)',
                             [v_groupcode, v_fbbspecies],
                             function(tx, v_results) {
@@ -154,11 +183,14 @@ function updSpeGp() {
                                 for (var v_count = 0; v_count < v_rowcount; v_count ++) {
                                     var v_fbaattrcode_ins = v_results.rows.item(v_count).fbaattrcode;
                                     var v_facname_ins = v_results.rows.item(v_count).facname;
+                                    var v_facfldtype_ins = v_results.rows.item(v_count).facfldtype;
+                                    var v_facvalidcodes_ins = v_results.rows.item(v_count).facvalidcodes;
                                     
                                     // Select every specimen linked to this species
                                     var v_specimencount = v_specimens.length;
                                     for (var v_count2 = 0; v_count2 < v_specimencount; v_count2 ++) {
                                         var v_faecode_ins = v_specimens[v_count2];
+
 
 //                                        if (v_count2 === 0) {
                                             // Check for dispans header, create if necessary;
@@ -173,11 +205,11 @@ function updSpeGp() {
                                             }
                                             if (v_counter === 0) {
                                               v_fbc_arr.push([v_fbcheader, v_faecode_ins, null,v_facname_ins, v_dispans, null]);
-                                              tx.executeSql('INSERT INTO fbcsfa (fbcheader, fbcspecimencode, fbcattrcode, fbcattrtitle, fbcdispans, fbcans) '
-                                                          + 'VALUES (?, ?,NULL,?,?,NULL)',
-                                                             [v_fbcheader, v_faecode_ins,
+                                              tx.executeSql('INSERT INTO fbcsfa (fbcheader, fbcspecies, fbcspecimencode, fbcattrcode, fbcattrtitle, fbcdispans, fbcans) '
+                                                          + 'VALUES (?, ?, ?,NULL,?,?,NULL)',
+                                                             [v_fbcheader, v_fbbspecies, v_faecode_ins,
                                                               v_facname_ins,
-                                                              v_dispans], nullData);
+                                                              v_dispans], nullData, errorHandler_fbb);
                                             } 
 //                                        }
                                         // Check if this record (A) exists in the array
@@ -193,21 +225,97 @@ function updSpeGp() {
                                         if (v_found === 0) {
                                             v_dispans = "A";
                                             v_fbc_arr.push([v_fbcheader, v_faecode_ins, v_fbaattrcode_ins,v_facname_ins, v_dispans, null]);
-                                            tx.executeSql('INSERT INTO fbcsfa (fbcheader, fbcspecimencode, fbcattrcode, fbcattrtitle, fbcdispans, fbcans) '
-                                                        + 'VALUES (?, ?,?,?,?,NULL)',
-                                                         [v_fbcheader, v_faecode_ins,
+                                            tx.executeSql('INSERT INTO fbcsfa (fbcheader, fbcspecies, fbcspecimencode, fbcattrcode, fbcattrtitle, fbcdispans, fbcans, fbcfldtype, fbcvalidcodes) '
+                                                        + 'VALUES (?, ?, ?,?,?,?,NULL,?,?)',
+                                                         [v_fbcheader, v_fbbspecies, v_faecode_ins,
                                                           v_fbaattrcode_ins, v_facname_ins,
-                                                          v_dispans], nullData);
+                                                          v_dispans, v_facfldtype_ins, v_facvalidcodes_ins], nullData);
                                         }
                                     };
                                 }
                             },
                             errorHandler);
+                            
+                /* Now do the same thing just backwards, for all those SPECIMENS who have been added and are not on the list for GROUP */
+                db.transaction(function(tx) {
+                    tx.executeSql('SELECT faecode '
+                                + 'FROM   faespm '
+                                + 'WHERE  faespecies = ? '
+                                + 'AND    faecode NOT IN '
+                                        + '   (SELECT fbcspecimencode '
+                                        + '    FROM   fbcsfa, fbbsgl '
+                                        + '    WHERE  fbcspecies = ?'
+                                        + '    AND    fbcspecies = fbbspecies '
+                                        + '    AND    fbbgroupcode = ?)',
+                                        [v_fbbspecies, v_fbbspecies, v_tmpgroup],
+                                        function(tx, v_spec_results) {
+                                            var v_spec_rowcount = v_spec_results.rows.length;
+                                            for (v_speccounter = 0; v_speccounter < v_spec_rowcount; v_speccounter ++) {
+                                              var v_faecode_ins = v_spec_results.rows.item(v_speccounter).faecode;
+/* --- */
+                tx.executeSql('SELECT fbaattrcode, facname, facabbr, facfldtype, facvalidcodes '
+                            + 'FROM   fbagpa, facatr, fbbsgl '
+                            + 'WHERE  fbagroupcode = ? '
+                            + 'AND    fbaattrcode = faccode '
+                            + 'AND    fbbspecies = ?'
+                            + 'AND    fbbgroupcode = fbagroupcode',
+                            [v_tmpgroup, v_fbbspecies],
+                            function(tx, v_results) {
+                                var v_rowcount = v_results.rows.length;
+                                for (var v_count = 0; v_count < v_rowcount; v_count ++) {
+                                    var v_fbaattrcode_ins   = v_results.rows.item(v_count).fbaattrcode;
+                                    var v_facname_ins       = v_results.rows.item(v_count).facname;
+                                    var v_facfldtype_ins    = v_results.rows.item(v_count).facfldtype;
+                                    var v_facvalidcodes_ins = v_results.rows.item(v_count).facvalidcodes;
+                                    
+                                    var v_dispans = 'D';
+                                    var v_counter = 0;
+                                    for (v_c = 0; v_c < v_fbc_arr.length; v_c ++) {
+                                        if ((v_fbc_arr[v_c][1] === v_faecode_ins) &&
+                                            (v_fbc_arr[v_c][0] === v_fbcheader) &&
+                                            (v_fbc_arr[v_c][4] === "D") ) {
+                                                v_counter ++;
+                                        }
+                                    }
+                                    if (v_counter === 0) {
+                                      v_fbc_arr.push([v_fbcheader, v_faecode_ins, null,v_facname_ins, v_dispans, null]);
+                                      tx.executeSql('INSERT INTO fbcsfa (fbcheader, fbcspecies, fbcspecimencode, fbcattrcode, fbcattrtitle, fbcdispans, fbcans) '
+                                                  + 'VALUES (?, ?, ?,NULL,?,?,NULL)',
+                                                     [v_fbcheader, v_fbbspecies, v_faecode_ins,
+                                                      v_facname_ins,
+                                                      v_dispans], nullData, errorHandler_fbb);
+                                    } 
+                                        // Check if this record (A) exists in the array
+                                        var v_found = 0;
+                                        for (v_c = 0; v_c < v_fbc_arr.length; v_c ++) {
+                                            if ((v_fbc_arr[v_c][1] === v_faecode_ins) &&
+                                                (v_fbc_arr[v_c][2] === v_fbaattrcode_ins) &&
+                                                (v_fbc_arr[v_c][0] === v_fbcheader) &&
+                                                (v_fbc_arr[v_c][4] === "A") ) {
+                                                    v_found ++;
+                                            }
+                                        }
+                                        if (v_found === 0) {
+                                            v_dispans = "A";
+                                            v_fbc_arr.push([v_fbcheader, v_faecode_ins, v_fbaattrcode_ins,v_facname_ins, v_dispans, null]);
+                                            tx.executeSql('INSERT INTO fbcsfa (fbcheader, fbcspecies, fbcspecimencode, fbcattrcode, fbcattrtitle, fbcdispans, fbcans, fbcfldtype, fbcvalidcodes) '
+                                                        + 'VALUES (?, ?, ?,?,?,?,NULL,?,?)',
+                                                         [v_fbcheader, v_fbbspecies, v_faecode_ins,
+                                                          v_fbaattrcode_ins, v_facname_ins,
+                                                          v_dispans, v_facfldtype_ins, v_facvalidcodes_ins], nullData);
+                                        }
+                                }
+                            },
+                            errorHandler);
+
+/* --- */
+                                            }
+                                        }, errorHandler);
             });
           });
        });
     });
-
+  });
 }
 
 function errorHandler_fbb(transaction, error) {

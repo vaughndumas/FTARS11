@@ -13,6 +13,7 @@ and open the template in the editor.
         <link href="css/jquery.mobile-1.4.1.css" rel="stylesheet" type="text/css">
         <script src="js/libs/jquery/jquery.js"></script>
         <script src="js/libs/jquery-mobile/jquery.mobile.js"></script>
+        <script src="js/libs/jquery.number.js"></script>
         <script src="js/startup.js"></script>
         <script src="js/db_faa.js"></script>
         <script src="js/db_fab.js"></script>
@@ -23,6 +24,9 @@ and open the template in the editor.
         <script src="js/ftars001.js"></script>
         <script src="js/ftars002.js"></script>
         <script>
+            var v_currentspecies = '';
+            var v_currentspecimen = -1;
+           
             function showMain() {
                 $(function() {
                    $("#divSetup").hide();
@@ -31,30 +35,43 @@ and open the template in the editor.
             }
 
             function divToggle(x_off, x_on) {
-                function doBack(x_off, x_on) {
-                    $("#"+x_on).hide(); 
-                    $("#"+x_off).show();
-                    document.removeEventListener("backbutton", function(){}, false);
-                }
+                $("#content").hide(); 
                 $(function() {
                     $("#"+x_off).hide();
                     $("#"+x_on).show();
                 });
-                document.addEventListener("deviceready", function() {document.addEventListener("backbutton", function(e){e.preventDefault; doBack(x_off, x_on);  }, false);}, false);
-                if (x_on === "divSetup")
+                if (x_on === "content") {
+                    document.removeEventListener("backbutton", function(){}, false);
+                }
+                else if (x_on === "divSetup") {
+                    document.removeEventListener("backbutton", function(){}, false);
+                    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", function(e){e.preventDefault; divToggle(x_on, x_off);  }, false);}, false);
                     getFaa();
-                else if (x_on === "divSetupSpecies")
+                }
+                else if (x_on === "divSetupSpecies") {
                     getFab();
-                else if (x_on === "divListAttr")
+                }
+//                else if (x_on === "divEditSpecies") {
+//                    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", function(e){e.preventDefault; $("#divEditSpecies").hide(); $("divSetupSpecies").show(); document.removeEventListener("backbutton", function(){}, false); }, false);}, false);
+//                }
+                else if (x_on === "divAddSpecies") {
+                    addFab();
+                }
+                else if (x_on === "divListAttr") {
                     getFac();
-                else if (x_on === "divListGp")
+                }
+                else if (x_on === "divListGp") {
                     getFad();
-                else if (x_on === "divAddSpm")
+                }
+                else if (x_on === "divAddSpm") {
                     getFae();
-                else if (x_on === "divListSpecimens")
-                    listFae();
-                
+                }
+                else if (x_on === "divAddAttr") {
+                    addAttr(); 
+                }
             }
+           
+
         </script>
     </head>
     <body style="background-color: #000">
@@ -63,10 +80,12 @@ and open the template in the editor.
 
         <div id="content">
             <h1 style="text-align: center">Field Trip</h1>
-            <h2 style="text-align: center">Attribute Recording (1.1.1.0)</h2>
+            <h2 style="text-align: center">Attribute Recording (1.1.6)</h2>
             <button class="ui-button ui-corner-all" onClick="divToggle('content', 'divSetup');">Setup</button>
             <button class="ui-button ui-corner-all" onClick="divToggle('content', 'divSetupSpecies');">View Species</button>
+            <!--
             <button class="ui-button ui-corner-all" onClick="divToggle('content', 'divListSpecimens');">View Specimens</button>
+            -->
             <button class="ui-button ui-corner-all" onClick="divToggle('content', 'divListAttr');">View Attributes</button>
             <button class="ui-button ui-corner-all" onClick="divToggle('content', 'divListGp');">View Groups</button>
             <button class="ui-button ui-corner-all" onClick="divToggle('content', 'divSyncUp');">Upload Survey Data</button>
@@ -100,7 +119,8 @@ and open the template in the editor.
         -->
         <div id="divListSpecimens" style="display:none">
             <h1 style="text-align: center">FTARS Specimen List</h1>
-            <button class="ui-button ui-btn-inline" onClick="divToggle('divListSpecimens', 'divAddSpm');">Add a specimen</button>
+            <table class="fullwidth" style="border: 0"><tr><td><button class="ui-button ui-btn-inline" onClick="divToggle('divListSpecimens', 'divAddSpm');">Add a specimen</button></td>
+                    <td><button class="ui-button ui-btn-inline" onClick="quickAdd();">Quick Add</button></td></tr></table>
             <table id="tbl_spm_list" class="fullwidth">
                <tr>
                     <th>Sequence</th>
@@ -108,7 +128,7 @@ and open the template in the editor.
                     <th>&nbsp;</th>
                 </tr>
             </table>
-            <button class="ui-button ui-btn-inline" onClick="divToggle('divListSpecimens', 'content'); return false;">Back</button>
+            <button class="ui-button ui-btn-inline" onClick="divToggle('divListSpecimens', 'divSetupSpecies'); return false;">Back</button>
         </div>
         <div id="divAddSpm" style="display:none">
             <h1 style="text-align: center">Add a specimen</h1>
@@ -117,15 +137,9 @@ and open the template in the editor.
                     <legend>Add a new specimen</legend>
                     <label for="x_faeseq"><strong>Sequence</strong></label>
                     <input type="text" id="x_faeseq" name="x_faeseq" maxlength="8"/>
-                    <br />
-                    <div class="ui-field-contain">
-                    <label for="x_faespecies">Species</label>
-                    <select name="x_faespecies" id="x_faespecies">
-                    </select>
-                    </div>
                 </fieldset>
-                <button class="ui-button ui-btn-inline" onClick="insFae(); divToggle('divAddSpm', 'divListSpecimens'); return false;">Save</button>
-                <button class="ui-button ui-btn-inline" onClick="divToggle('divAddSpm', 'divListSpecimens'); return false;">Back</button>
+                <button class="ui-button ui-btn-inline" onClick="insFae(); divToggle('divAddSpm', 'divListSpecimens'); listFae(v_currentspecies); return false;">Save</button>
+                <button class="ui-button ui-btn-inline" onClick="divToggle('divAddSpm', 'divListSpecimens'); listFae(v_currentspecies); return false;">Back</button>
             </form>
         </div>
         <div id="divEditSpm" style="display:none">
@@ -136,14 +150,9 @@ and open the template in the editor.
                     <legend>Edit a specimen</legend>
                     <label for="x_faeseq">Sequence</label>
                     <input type="text" class="text" id="x_faeseq" name="x_faeseq" maxlength="8"/>
-                    <br />
-                    <div class="ui-field-contain">
-                    <label for="x_faespecies">Species</label>
-                    <select name="x_faespecies" id="x_faespecies"></select>
-                    </div>
                 </fieldset>
-                <button class="ui-button ui-btn-inline" onClick="updFae(); divToggle('divEditSpm', 'divListSpecimens'); return false;">Save</button>
-                <button class="ui-button ui-btn-inline" onClick="divToggle('divEditSpm', 'divListSpecimens'); return false;">Back</button>
+                <button class="ui-button ui-btn-inline" onClick="updFae(); divToggle('divEditSpm', 'divListSpecimens'); listFae(v_currentspecies); return false;">Save</button>
+                <button class="ui-button ui-btn-inline" onClick="divToggle('divEditSpm', 'divListSpecimens'); listFae(v_currentspecies); return false;">Back</button>
             </form>
         </div>
         <div id="divRecordData" style="display:none">
@@ -154,7 +163,7 @@ and open the template in the editor.
                     <table id="tbl_recdata_list" class="fullwidth"></table>
                 </fieldset>
             </form>
-            <button class="ui-button ui-btn-inline" onClick="updRecData(); divToggle('divRecordData', 'divListSpecimens'); return false;">Save</button>
+            <button class="ui-button ui-btn-inline" onClick="updRecData(); divToggle('divRecordData', 'divListSpecimens'); listFae(v_currentspecies); return false;">Save</button>
             <button class="ui-button ui-btn-inline" onClick="divToggle('divRecordData', 'divListSpecimens'); return false;">Back</button>
         </div>
 
@@ -243,11 +252,13 @@ and open the template in the editor.
         -->
         <div id="divListAttr" style="display:none">
             <h1 style="text-align: center">FTARS Attribute List</h1>
-            <button class="ui-button ui-btn-inline" onClick="addAttr(); divToggle('divListAttr', 'divAddAttr'); return false;">Add an attribute</button>
+            <button class="ui-button ui-btn-inline" onClick="divToggle('divListAttr', 'divAddAttr'); return false;">Add an attribute</button>
             <table id="tbl_attr_list" class="fullwidth">
                <tr>
                     <th>Abbr</th>
                     <th>Name</th>
+                    <th>Type</th>
+                    <th>Valid values</th>
                     <th>&nbsp;</th>
                 </tr>
             </table>
@@ -263,6 +274,18 @@ and open the template in the editor.
                     <br />
                     <label for="x_facname"><strong>Name</strong></label>
                     <input type="text" id="x_facname" name="x_facname" maxlength="64" value=""/>
+                    <br />
+                    <fieldset data-role="controlgroup">
+                        <legend>Field type</legend>
+                        <input type="radio" name="x_facfldtype" id="x_facfldtype_n" value="N" checked="checked">
+                        <label for="x_facfldtype_n">Numeric</label>
+                        <input type="radio" name="x_facfldtype" id="x_facfldtype_a" value="A">
+                        <label for="x_facfldtype_a">Alphanumeric</label>
+                        <input type="radio" name="x_facfldtype" id="x_facfldtype_r" value="R">
+                        <label for="x_facfldtype_r">Radio button</label>
+                    </fieldset>
+                    <label for="x_facvalidcodes"><strong>Valid values</strong></label>
+                    <input type="text" id="x_facvalidcodes" name="x_facvalidcodes" maxlength="64" value=""/>
                 </fieldset>
                 <button class="ui-button ui-btn-inline" onClick="insFac(); divToggle('divAddAttr', 'divListAttr'); return false;">Save</button>
                 <button class="ui-button ui-btn-inline" onClick="divToggle('divAddAttr', 'divListAttr'); return false;">Back</button>
@@ -279,6 +302,18 @@ and open the template in the editor.
                     <br />
                     <label for="x_facname"><strong>Name</strong></label>
                     <input type="text" class="text" id="x_facname" name="x_facname" maxlength="64" value=""/>
+                    <fieldset data-role="controlgroup">
+                        <legend>Field type</legend>
+                        <input type="radio" name="x_facfldtype" id="x_facfldtype_n" value="N">
+                        <label for="x_facfldtype_n">Numeric</label>
+                        <input type="radio" name="x_facfldtype" id="x_facfldtype_a" value="A">
+                        <label for="x_facfldtype_a">Alphanumeric</label>
+                        <input type="radio" name="x_facfldtype" id="x_facfldtype_r" value="R">
+                        <label for="x_facfldtype_r">Radio button</label>
+                    </fieldset>
+                    <label for="x_facvalidcodes"><strong>Valid values</strong></label>
+                    <input type="text" id="x_facvalidcodes" name="x_facvalidcodes" maxlength="64" value=""/>
+
                 </fieldset>
                 <button class="ui-button ui-btn-inline" onClick="updFac(); divToggle('divEditAttr', 'divListAttr'); return false">Save</button>
                 <button class="ui-button ui-btn-inline" onClick="divToggle('divEditAttr', 'divListAttr'); return false;">Back</button>
@@ -295,7 +330,7 @@ and open the template in the editor.
         
         <div id="divListGp" style="display:none">
             <h1 style="text-align: center">FTARS Group List</h1>
-            <button class="ui-button ui-btn-inline" onClick="addGp(); divToggle('divListGp', 'divAddGp'); return false;">Add a group</button>
+            <button class="ui-button ui-btn-inline" onClick="divToggle('divListGp', 'divAddGp'); addGp(); return false;">Add a group</button>
             <table id="tbl_gp_list" class="fullwidth">
             </table>
             <button class="ui-button ui-btn-inline" onClick="divToggle('divListGp', 'content'); return false;">Back</button>

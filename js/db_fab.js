@@ -2,7 +2,38 @@ if(openDatabase){
         db = openDatabase('ftars_jb' , '1.0' , 'FTARS Jervis Bay' , 2 * 1024 * 1024);
 };
 
+var v_getFab_fn = function(e) {
+    e.preventDefault; 
+    $("#divSetupSpecies").hide(); 
+    $("#content").show();
+    document.addEventListener("deviceready", function() {document.removeEventListener("backbutton", v_getFab_fn, false);}, false);
+};
+var v_editSpecies_fn = function(e) {
+    e.preventDefault; 
+    $("#divEditSpecies").hide(); 
+    $("#divSetupSpecies").show(); 
+    $("#content").hide(); 
+    $("tbl_species_list").empty();
+    getFab();
+    document.addEventListener("deviceready", function() {document.removeEventListener("backbutton", v_editSpecies_fn, false);}, false);
+};
+
+var v_addFab_fn = function(e) {
+    e.preventDefault; 
+    $("#divAddSpecies").hide(); 
+    $("#divSetupSpecies").show(); 
+    $("#content").hide(); 
+    $("tbl_species_list").empty();
+    getFab();
+    document.removeEventListener("backbutton", v_addFab_fn);
+};
+
+function addFab() {
+    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", v_addFab_fn, false);}, false);
+}
 function editSpecies(x_fabcode) {
+//      divToggle("divSetupSpecies", "divEditSpecies");
+    
     $("#divSetupSpecies").hide();
     $("#divEditSpecies").show();
     // Get the FAB data
@@ -24,6 +55,9 @@ function editSpecies(x_fabcode) {
                      },
                      errorHandler);
     });
+
+    document.addEventListener("backbutton", v_editSpecies_fn, false);
+
 }
 
 function insFab() {
@@ -63,7 +97,9 @@ function updFab() {
 }
 
 function getFab() {
-    $("#divSetupSpecies #tbl_species_list").empty();
+    //#divSetupSpecies 
+    $("#tbl_species_list", "#divSetupSpecies").empty();
+    var v_trdata = "";
     db.transaction(function(tx) {
        tx.executeSql('SELECT * FROM fabspe ORDER BY fabdefault desc, fababbr asc',
                      [],
@@ -71,7 +107,7 @@ function getFab() {
                          var v_rowcount = v_results.rows.length; 
                          for (v_count = 0; v_count < v_rowcount; v_count ++) {
                             if (v_count == 0) {
-                               v_trdata = "<tr><th>Abbr</th><th>Name</th><th>&nbsp;</th><th>&nbsp;</th></tr>";
+                               v_trdata = "<tr><th>Abbr</th><th>Name</th><th>&nbsp;</th><th>&nbsp;</th><th>&nbsp;</th></tr>";
                                $(v_trdata).appendTo("#divSetupSpecies #tbl_species_list");
                             }
                             v_trdata = "<tr><td>" + v_results.rows.item(v_count).fababbr + "</td>";
@@ -81,11 +117,14 @@ function getFab() {
                                 v_trdata += "<td>" + v_results.rows.item(v_count).fabname + "</td>";
                             v_trdata += "<td><button class=\"ui-button ui-btn-inline\" onClick=\"editSpecies("+v_results.rows.item(v_count).fabcode+");\">Edit</button></td>";
                             v_trdata += "<td><button class=\"ui-button ui-btn-inline\" onClick=\"editFbb("+v_results.rows.item(v_count).fabcode+");\">Link Groups</button></td>";
+                            v_trdata += "<td><button class=\"ui-button ui-btn-inline\" onClick=\"v_currentspecies="+v_results.rows.item(v_count).fabcode+"; listFae("+v_results.rows.item(v_count).fabcode+");\">Specimens</button></td>";
                             v_trdata += "</tr>";
-                            $(v_trdata).appendTo("#divSetupSpecies #tbl_species_list");
+                            $("#tbl_species_list").append(v_trdata);
+                            //$(v_trdata).appendTo("#tbl_species_list");
                          }
                      }, 
                      errorHandler) ;
     });
+    document.addEventListener("deviceready", function() {document.addEventListener("backbutton", v_getFab_fn, true);}, false);
 }
 

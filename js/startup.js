@@ -64,9 +64,10 @@ $(document).ready(function(){
            tx.executeSql('CREATE TABLE IF NOT EXISTS facatr ('
                        + 'faccode INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
                        + 'facabbr VARCHAR(16),'
-                       + 'facname VARCHAR(64));',
+                       + 'facname VARCHAR(64), '
+                       + 'facfldtype VARCHAR(32), '
+                       + 'facvalidcodes VARCHAR(64));',
                        [], nullData, errorHandler2);
-           //tx.executeSql('DELETE FROM facatr', nullData, errorHandler);
         });
 
         
@@ -84,7 +85,8 @@ $(document).ready(function(){
            tx.executeSql("CREATE TABLE IF NOT EXISTS faespm ("
                        + "faecode INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
                        + "faeseq INTEGER NOT NULL, "
-                       + "faespecies INTEGER NOT NULL);",
+                       + "faespecies INTEGER NOT NULL, "
+                       + "faecomplind CHAR(1));",
                        [], nullData, errorHandler2); 
         });
         
@@ -111,15 +113,15 @@ $(document).ready(function(){
             tx.executeSql("CREATE TABLE IF NOT EXISTS fbcsfa ("
                         + "fbccode INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
                         + "fbcheader VARCHAR(64), "
+                        + "fbcspecies INTEGER, "
                         + "fbcspecimencode INTEGER, "
                         + "fbcattrcode INTEGER, "
                         + "fbcattrtitle VARCHAR(64), "
                         + "fbcdispans CHAR(1), "
-                        + "fbcans VARCHAR(64));",
+                        + "fbcans VARCHAR(64), "
+                        + "fbcfldtype VARCHAR(32), "
+                        + "fbcvalidcodes VARCHAR(64));" +
                         [], nullData, errorHandler_startup);
-//            tx.executeSql('DELETE FROM fbcsfa', errorHandler2);
-//            tx.executeSql('INSERT INTO fbcsfa (fbcheader, fbcspecimencode, fbcattrcode, fbcattrtitle, fbcdispans, fbcans) '
-//                    + ' values (?,?,?,?,?, null)',["Test Group (tstgp)", 4, 8, "Terrain info", "A"], errorHandler);
         });
         
 
@@ -145,6 +147,6 @@ $(document).ready(function(){
 function errorHandler_startup(transaction, error) {
     var v_errmsg = 'Error in startup: ' + error.message;
     v_errmsg += ' Code ';
-    v_errmsg += error.code;
+//    v_errmsg += error.code;
     console.log(v_errmsg);
 }
